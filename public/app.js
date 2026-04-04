@@ -127,7 +127,6 @@ function renderWeekly() {
         <div class="weekly-song-artist">${esc(s.artist)}</div>
       </div>
       <span class="status-badge ${statusClass(s.status)}">${esc(s.status)}</span>
-      ${s.chart ? `<a class="btn btn-sm" href="${esc(s.chart)}" target="_blank" rel="noopener" title="Open chart">Chart</a>` : ''}
     </div>
   `).join('');
 }
@@ -250,7 +249,6 @@ function renderTable() {
           <button class="btn btn-sm" onclick="markReviewedToday('${s.id}')" title="Mark reviewed today">✓ Today</button>
           <button class="btn btn-sm" onclick="openModal('${s.id}')" title="Edit">Edit</button>
           <button class="btn btn-sm btn-danger" onclick="openConfirm('${s.id}')" title="Delete">Del</button>
-          ${s.chart ? `<a class="btn btn-sm" href="${esc(s.chart)}" target="_blank" rel="noopener" title="Open chart">Chart</a>` : ''}
         </div>
       </td>
     </tr>`;
@@ -299,7 +297,6 @@ function openModal(id) {
     document.getElementById('fStatus').value = s.status;
     document.getElementById('fLastReviewed').value = s.lastReviewed || '';
     document.getElementById('fNotes').value = s.notes || '';
-    document.getElementById('fChart').value = s.chart || '';
   } else {
     document.getElementById('modalTitle').textContent = 'Add Song';
     document.getElementById('fTitle').value = '';
@@ -308,7 +305,6 @@ function openModal(id) {
     document.getElementById('fStatus').value = "Don't Know";
     document.getElementById('fLastReviewed').value = '';
     document.getElementById('fNotes').value = '';
-    document.getElementById('fChart').value = '';
   }
 
   setTimeout(() => document.getElementById('fTitle').focus(), 50);
@@ -333,7 +329,6 @@ function saveSong() {
     s.status = document.getElementById('fStatus').value;
     s.lastReviewed = document.getElementById('fLastReviewed').value || null;
     s.notes = document.getElementById('fNotes').value.trim();
-    s.chart = document.getElementById('fChart').value.trim() || null;
   } else {
     songs.push({
       id: genId(),
@@ -342,8 +337,7 @@ function saveSong() {
       tier: document.getElementById('fTier').value,
       status: document.getElementById('fStatus').value,
       lastReviewed: document.getElementById('fLastReviewed').value || null,
-      notes: document.getElementById('fNotes').value.trim(),
-      chart: document.getElementById('fChart').value.trim() || null
+      notes: document.getElementById('fNotes').value.trim()
     });
   }
 

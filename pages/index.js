@@ -129,10 +129,6 @@ const bodyHTML = `
       <label class="form-label">Notes</label>
       <textarea id="fNotes" placeholder="Key, common requests, capo position, etc."></textarea>
     </div>
-    <div class="form-group">
-      <label class="form-label">Chart Path</label>
-      <input type="text" id="fChart" placeholder="/path/to/chart.pdf">
-    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveSong()">Save</button>

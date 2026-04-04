@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nashville Coverage Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --text: #e8e8e8;
+    --text-muted: #888;
+    --accent: #f5a623;
+    --green: #4caf50;
+    --yellow: #ffc107;
+    --red: #f44336;
+    --blue: #2196f3;
+    --tier-a: #ff6b6b;
+    --tier-b: #ffa94d;
+    --tier-c: #74c0fc;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+  /* Panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* Score panel */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
+
+  .score-card {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+
+  .score-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .score-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .score-value.good { color: var(--green); }
+  .score-value.ok { color: var(--yellow); }
+  .score-value.bad { color: var(--red); }
+
+  .score-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .alert-bar {
+    background: rgba(244, 67, 54, 0.12);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--red);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .alert-bar.hidden { display: none; }
+
+  /* Weekly panel */
+  .weekly-songs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .weekly-song {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--tier-a);
+    border-radius: 4px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .weekly-song-info { flex: 1; min-width: 0; }
+  .weekly-song-title { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .weekly-song-artist { font-size: 11px; color: var(--text-muted); }
+  .weekly-empty { color: var(--text-muted); font-style: italic; font-size: 13px; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+
+  .search-wrap {
+    flex: 1;
+    min-width: 160px;
+  }
+
+  input[type="text"], input[type="date"], textarea, select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    padding: 7px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type="text"]:focus, input[type="date"]:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  textarea { resize: vertical; min-height: 60px; }
+
+  select { cursor: pointer; }
+
+  /* Filter pills */
+  .filter-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .pill:hover { border-color: var(--accent); color: var(--text); }
+  .pill.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+  /* Buttons */
+  .btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover { background: #d48f1a; border-color: #d48f1a; color: #000; }
+
+  .btn-sm {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .btn-danger { color: var(--red); }
+  .btn-danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: var(--surface);
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  th.sortable { cursor: pointer; }
+  th.sortable:hover { color: var(--text); }
+  th.sort-active { color: var(--accent); }
+
+  .sort-arrow { margin-left: 4px; opacity: 0.6; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 9px 12px;
+    vertical-align: middle;
+  }
+
+  .td-title { font-weight: 500; max-width: 200px; }
+  .td-artist { color: var(--text-muted); max-width: 150px; }
+  .td-title, .td-artist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .td-notes {
+    max-width: 160px;
+    color: var(--text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .td-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+
+  /* Badges */
+  .tier-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .tier-A { background: rgba(255,107,107,0.15); color: var(--tier-a); border: 1px solid rgba(255,107,107,0.3); }
+  .tier-B { background: rgba(255,169,77,0.12); color: var(--tier-b); border: 1px solid rgba(255,169,77,0.3); }
+  .tier-C { background: rgba(116,192,252,0.1); color: var(--tier-c); border: 1px solid rgba(116,192,252,0.25); }
+
+  .status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .status-badge:hover { opacity: 0.8; transform: scale(0.97); }
+
+  .status-kc { background: rgba(76,175,80,0.15); color: var(--green); border-color: rgba(76,175,80,0.3); }
+  .status-cf { background: rgba(255,193,7,0.12); color: var(--yellow); border-color: rgba(255,193,7,0.3); }
+  .status-dk { background: rgba(244,67,54,0.12); color: var(--red); border-color: rgba(244,67,54,0.3); }
+
+  .reviewed-date { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .reviewed-old { color: var(--red) !important; }
+
+  /* Empty state */
+  .empty-state {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .empty-state p { margin-top: 8px; font-size: 13px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+
+  .modal-overlay.hidden { display: none; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .modal-title { font-size: 15px; font-weight: 700; }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  .form-group { margin-bottom: 12px; }
+
+  .form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+
+  /* Confirm dialog */
+  .confirm-msg {
+    font-size: 13px;
+    margin-bottom: 16px;
+    color: var(--text-muted);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    z-index: 2000;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.2s ease;
+    max-width: 280px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Sort indicator */
+  .table-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    padding: 0 2px;
+  }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .score-grid { grid-template-columns: 1fr 1fr; }
+    td:nth-child(6), th:nth-child(6) { display: none; } /* hide notes col on mobile */
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Nashville Coverage Tracker</h1>
+  <div class="header-actions">
+    <button class="btn" onclick="exportJSON()">Export JSON</button>
+    <label class="btn" style="cursor:pointer">
+      Import JSON
+      <input type="file" accept=".json" style="display:none" onchange="importJSON(event)">
+    </label>
+    <button class="btn btn-primary" onclick="openModal()">+ Add Song</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Coverage Score Panel -->
+  <div class="panel" id="scorePanel">
+    <div class="panel-title">Coverage Score</div>
+    <div class="score-grid" id="scoreGrid">
+      <div class="score-card">
+        <div class="score-label">A-Tier (Know Cold)</div>
+        <div class="score-value" id="scoreA">—</div>
+        <div class="score-sub" id="scoreASub"></div>
+      </div>
+      <div class="score-card">
+        <div class="score-label">B-Tier (Know Cold or Can Fake)</div>
+        <div class="score-value" id="scoreB">—</div>
+        <div class="score-sub" id="scoreBSub"></div>
+      </div>
+      <div class="score-card">
+        <div class="score-label">C-Tier (Know Cold or Can Fake)</div>
+        <div class="score-value" id="scoreC">—</div>
+        <div class="score-sub" id="scoreCSub"></div>
+      </div>
+      <div class="score-card">
+        <div class="score-label">Overall Weighted Score</div>
+        <div class="score-value" id="scoreOverall">—</div>
+        <div class="score-sub">A×60% + B×30% + C×10%</div>
+      </div>
+    </div>
+    <div class="alert-bar hidden" id="alertBar">
+      <span>⚠</span> <span id="alertText"></span>
+    </div>
+  </div>
+
+  <!-- Weekly Workflow Panel -->
+  <div class="panel">
+    <div class="panel-title">This Week's Focus — A-Tier Gaps</div>
+    <div class="weekly-songs" id="weeklySongs"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="Search title or artist…" oninput="renderTable()">
+    </div>
+    <div class="filter-pills">
+      <div class="pill active" data-filter="all" onclick="setFilter(this, 'all')">All</div>
+      <div class="pill" data-filter="a-gaps" onclick="setFilter(this, 'a-gaps')">A-Tier Gaps</div>
+      <div class="pill" data-filter="cant-fake" onclick="setFilter(this, 'cant-fake')">Can't Fake</div>
+      <div class="pill" data-filter="needs-review" onclick="setFilter(this, 'needs-review')">Needs Review</div>
+    </div>
+  </div>
+
+  <!-- Table meta -->
+  <div class="table-meta" id="tableMeta"></div>
+
+  <!-- Main Table -->
+  <div class="table-wrap">
+    <table id="songTable">
+      <thead>
+        <tr>
+          <th class="sortable" onclick="setSort('title')">Title <span class="sort-arrow" id="sort-title"></span></th>
+          <th class="sortable" onclick="setSort('artist')">Artist <span class="sort-arrow" id="sort-artist"></span></th>
+          <th class="sortable" onclick="setSort('tier')">Tier <span class="sort-arrow" id="sort-tier"></span></th>
+          <th class="sortable" onclick="setSort('status')">Status <span class="sort-arrow" id="sort-status"></span></th>
+          <th class="sortable" onclick="setSort('lastReviewed')">Reviewed <span class="sort-arrow" id="sort-lastReviewed"></span></th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="songBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Song</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Title *</label>
+      <input type="text" id="fTitle" placeholder="e.g. Jolene">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Artist *</label>
+      <input type="text" id="fArtist" placeholder="e.g. Dolly Parton">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tier</label>
+        <select id="fTier">
+          <option value="A">A — Must Know</option>
+          <option value="B" selected>B — Should Know</option>
+          <option value="C">C — Nice to Have</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select id="fStatus">
+          <option value="Don't Know" selected>Don't Know</option>
+          <option value="Can Fake">Can Fake</option>
+          <option value="Know Cold">Know Cold</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Last Reviewed</label>
+      <input type="date" id="fLastReviewed">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea id="fNotes" placeholder="Key, common requests, capo position, etc."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Chart Path</label>
+      <input type="text" id="fChart" placeholder="/path/to/chart.pdf">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSong()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay hidden" id="confirmOverlay" onclick="closeConfirm(event)">
+  <div class="modal" style="max-width:360px" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div class="modal-title">Delete Song</div>
+      <button class="modal-close" onclick="closeConfirm()">&times;</button>
+    </div>
+    <p class="confirm-msg" id="confirmMsg"></p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-primary btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'nct_songs';
+let songs = [];
+let editingId = null;
+let deletingId = null;
+let sortField = 'tier';
+let sortDir = 1; // 1 = asc, -1 = desc
+let activeFilter = 'all';
+
+// ─── Load / Save ─────────────────────────────────────────────────────────────
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    songs = raw ? JSON.parse(raw) : [];
+  } catch(e) { songs = []; }
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
+}
+
+// ─── ID helper ───────────────────────────────────────────────────────────────
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+// ─── Scoring ─────────────────────────────────────────────────────────────────
+function pct(num, den) {
+  if (den === 0) return null;
+  return Math.round((num / den) * 100);
+}
+
+function scoreColor(p) {
+  if (p === null) return '';
+  if (p >= 80) return 'good';
+  if (p >= 50) return 'ok';
+  return 'bad';
+}
+
+function updateScore() {
+  const a = songs.filter(s => s.tier === 'A');
+  const b = songs.filter(s => s.tier === 'B');
+  const c = songs.filter(s => s.tier === 'C');
+
+  const aKC = a.filter(s => s.status === 'Know Cold').length;
+  const bOK = b.filter(s => s.status === 'Know Cold' || s.status === 'Can Fake').length;
+  const cOK = c.filter(s => s.status === 'Know Cold' || s.status === 'Can Fake').length;
+
+  const pA = pct(aKC, a.length);
+  const pB = pct(bOK, b.length);
+  const pC = pct(cOK, c.length);
+
+  // weighted overall
+  let overall = null;
+  const totalWeight = (a.length ? 60 : 0) + (b.length ? 30 : 0) + (c.length ? 10 : 0);
+  if (totalWeight > 0) {
+    let weighted = 0;
+    if (a.length) weighted += (pA ?? 0) * 60;
+    if (b.length) weighted += (pB ?? 0) * 30;
+    if (c.length) weighted += (pC ?? 0) * 10;
+    overall = Math.round(weighted / totalWeight);
+  }
+
+  const fmt = p => p === null ? '—' : p + '%';
+
+  setScore('A', fmt(pA), `${aKC} / ${a.length} songs`, pA);
+  setScore('B', fmt(pB), `${bOK} / ${b.length} songs`, pB);
+  setScore('C', fmt(pC), `${cOK} / ${c.length} songs`, pC);
+
+  const ovEl = document.getElementById('scoreOverall');
+  ovEl.textContent = fmt(overall);
+  ovEl.className = 'score-value ' + scoreColor(overall);
+
+  // Alert
+  const aGaps = a.filter(s => s.status !== 'Know Cold').length;
+  const alertBar = document.getElementById('alertBar');
+  const alertText = document.getElementById('alertText');
+  if (aGaps > 0) {
+    alertText.textContent = `${aGaps} A-tier song${aGaps > 1 ? 's' : ''} not yet Know Cold — your highest priority gaps.`;
+    alertBar.classList.remove('hidden');
+  } else {
+    alertBar.classList.add('hidden');
+  }
+
+  // Weekly focus
+  renderWeekly();
+}
+
+function setScore(tier, val, sub, p) {
+  document.getElementById('score' + tier).textContent = val;
+  document.getElementById('score' + tier).className = 'score-value ' + scoreColor(p);
+  document.getElementById('score' + tier + 'Sub').textContent = sub;
+}
+
+function renderWeekly() {
+  const el = document.getElementById('weeklySongs');
+  const aGaps = songs.filter(s => s.tier === 'A' && s.status !== 'Know Cold');
+
+  // Sort: Don't Know first, then by oldest reviewed
+  aGaps.sort((a, b) => {
+    const statusOrder = {"Don't Know": 0, 'Can Fake': 1, 'Know Cold': 2};
+    const sd = statusOrder[a.status] - statusOrder[b.status];
+    if (sd !== 0) return sd;
+    const ad = a.lastReviewed || '0000-00-00';
+    const bd = b.lastReviewed || '0000-00-00';
+    return ad < bd ? -1 : 1;
+  });
+
+  const focus = aGaps.slice(0, 3);
+
+  if (focus.length === 0) {
+    el.innerHTML = '<div class="weekly-empty">All A-tier songs marked Know Cold — great work!</div>';
+    return;
+  }
+
+  el.innerHTML = focus.map(s => `
+    <div class="weekly-song">
+      <div class="weekly-song-info">
+        <div class="weekly-song-title">${esc(s.title)}</div>
+        <div class="weekly-song-artist">${esc(s.artist)}</div>
+      </div>
+      <span class="status-badge ${statusClass(s.status)}">${esc(s.status)}</span>
+    </div>
+  `).join('');
+}
+
+// ─── Filter & Sort ────────────────────────────────────────────────────────────
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const today = new Date();
+
+  return songs.filter(s => {
+    // search
+    if (q && !s.title.toLowerCase().includes(q) && !s.artist.toLowerCase().includes(q)) return false;
+    // filter
+    if (activeFilter === 'a-gaps') return s.tier === 'A' && s.status !== 'Know Cold';
+    if (activeFilter === 'cant-fake') return s.status === "Don't Know";
+    if (activeFilter === 'needs-review') {
+      if (!s.lastReviewed) return true;
+      const diff = (today - new Date(s.lastReviewed)) / (1000 * 60 * 60 * 24);
+      return diff >= 30;
+    }
+    return true;
+  });
+}
+
+const SORT_ORDER = {
+  tier: {A: 0, B: 1, C: 2},
+  status: {"Know Cold": 0, 'Can Fake': 1, "Don't Know": 2}
+};
+
+function getSorted(list) {
+  return [...list].sort((a, b) => {
+    let av = a[sortField] ?? '';
+    let bv = b[sortField] ?? '';
+    if (sortField === 'tier') { av = SORT_ORDER.tier[av] ?? 9; bv = SORT_ORDER.tier[bv] ?? 9; }
+    else if (sortField === 'status') { av = SORT_ORDER.status[av] ?? 9; bv = SORT_ORDER.status[bv] ?? 9; }
+    else { av = av.toString().toLowerCase(); bv = bv.toString().toLowerCase(); }
+    if (av < bv) return -1 * sortDir;
+    if (av > bv) return 1 * sortDir;
+    return 0;
+  });
+}
+
+function setSort(field) {
+  if (sortField === field) sortDir *= -1;
+  else { sortField = field; sortDir = 1; }
+  renderTable();
+}
+
+function setFilter(el, f) {
+  activeFilter = f;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+// ─── Render Table ─────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function statusClass(s) {
+  if (s === 'Know Cold') return 'status-kc';
+  if (s === 'Can Fake') return 'status-cf';
+  return 'status-dk';
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const parts = d.split('-');
+  return `${parts[1]}/${parts[2]}/${parts[0].slice(2)}`;
+}
+
+function isOld(d) {
+  if (!d) return true;
+  const diff = (new Date() - new Date(d)) / (1000 * 60 * 60 * 24);
+  return diff >= 30;
+}
+
+function renderTable() {
+  const filtered = getFiltered();
+  const sorted = getSorted(filtered);
+  const tbody = document.getElementById('songBody');
+
+  // Update sort arrows
+  ['title','artist','tier','status','lastReviewed'].forEach(f => {
+    const el = document.getElementById('sort-' + f);
+    if (!el) return;
+    const th = el.parentElement;
+    if (f === sortField) {
+      el.textContent = sortDir === 1 ? '↑' : '↓';
+      th.classList.add('sort-active');
+    } else {
+      el.textContent = '';
+      th.classList.remove('sort-active');
+    }
+  });
+
+  document.getElementById('tableMeta').textContent =
+    `${sorted.length} of ${songs.length} song${songs.length !== 1 ? 's' : ''}`;
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+      <strong>${songs.length === 0 ? 'No songs yet' : 'No matches'}</strong>
+      <p>${songs.length === 0 ? 'Click "+ Add Song" to get started.' : 'Try a different search or filter.'}</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = sorted.map(s => {
+    const old = isOld(s.lastReviewed);
+    return `<tr>
+      <td class="td-title" title="${esc(s.title)}">${esc(s.title)}</td>
+      <td class="td-artist" title="${esc(s.artist)}">${esc(s.artist)}</td>
+      <td><span class="tier-badge tier-${esc(s.tier)}">${esc(s.tier)}</span></td>
+      <td><span class="status-badge ${statusClass(s.status)}" data-song-id="${s.id}" title="Click to cycle: Don't Know → Can Fake → Know Cold">${esc(s.status)}</span></td>
+      <td><span class="reviewed-date ${old ? 'reviewed-old' : ''}">${fmtDate(s.lastReviewed)}</span></td>
+      <td class="td-notes" title="${esc(s.notes)}">${esc(s.notes) || '—'}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-sm" onclick="markReviewedToday('${s.id}')" title="Mark reviewed today">✓ Today</button>
+          <button class="btn btn-sm" onclick="openModal('${s.id}')" title="Edit">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="openConfirm('${s.id}')" title="Delete">Del</button>
+          ${s.chart ? `<a class="btn btn-sm" href="${esc(s.chart)}" target="_blank" rel="noopener" title="Open chart">Chart</a>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+const STATUS_CYCLE = ["Don't Know", 'Can Fake', 'Know Cold'];
+
+function cycleStatus(id) {
+  const s = songs.find(x => x.id == id);
+  if (!s) return;
+  const idx = STATUS_CYCLE.indexOf(s.status);
+  s.status = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  s.lastReviewed = today();
+  save();
+  refresh();
+  toast(`Status → ${s.status}`);
+}
+
+function markReviewedToday(id) {
+  const s = songs.find(x => x.id === id);
+  if (!s) return;
+  s.lastReviewed = today();
+  save();
+  refresh();
+  toast('Marked reviewed today');
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  editingId = id || null;
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.remove('hidden');
+
+  if (id) {
+    const s = songs.find(x => x.id === id);
+    document.getElementById('modalTitle').textContent = 'Edit Song';
+    document.getElementById('fTitle').value = s.title;
+    document.getElementById('fArtist').value = s.artist;
+    document.getElementById('fTier').value = s.tier;
+    document.getElementById('fStatus').value = s.status;
+    document.getElementById('fLastReviewed').value = s.lastReviewed || '';
+    document.getElementById('fNotes').value = s.notes || '';
+    document.getElementById('fChart').value = s.chart || '';
+  } else {
+    document.getElementById('modalTitle').textContent = 'Add Song';
+    document.getElementById('fTitle').value = '';
+    document.getElementById('fArtist').value = '';
+    document.getElementById('fTier').value = 'B';
+    document.getElementById('fStatus').value = "Don't Know";
+    document.getElementById('fLastReviewed').value = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('fChart').value = '';
+  }
+
+  setTimeout(() => document.getElementById('fTitle').focus(), 50);
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modalOverlay')) return;
+  document.getElementById('modalOverlay').classList.add('hidden');
+  editingId = null;
+}
+
+function saveSong() {
+  const title = document.getElementById('fTitle').value.trim();
+  const artist = document.getElementById('fArtist').value.trim();
+  if (!title || !artist) { toast('Title and artist are required'); return; }
+
+  if (editingId) {
+    const s = songs.find(x => x.id === editingId);
+    s.title = title;
+    s.artist = artist;
+    s.tier = document.getElementById('fTier').value;
+    s.status = document.getElementById('fStatus').value;
+    s.lastReviewed = document.getElementById('fLastReviewed').value || null;
+    s.notes = document.getElementById('fNotes').value.trim();
+    s.chart = document.getElementById('fChart').value.trim() || null;
+  } else {
+    songs.push({
+      id: genId(),
+      title,
+      artist,
+      tier: document.getElementById('fTier').value,
+      status: document.getElementById('fStatus').value,
+      lastReviewed: document.getElementById('fLastReviewed').value || null,
+      notes: document.getElementById('fNotes').value.trim(),
+      chart: document.getElementById('fChart').value.trim() || null
+    });
+  }
+
+  const wasEditing = !!editingId;
+  save();
+  closeModal();
+  refresh();
+  toast(wasEditing ? 'Song updated' : 'Song added');
+}
+
+// ─── Confirm Delete ───────────────────────────────────────────────────────────
+function openConfirm(id) {
+  deletingId = id;
+  const s = songs.find(x => x.id === id);
+  document.getElementById('confirmMsg').textContent =
+    `Delete "${s.title}" by ${s.artist}? This cannot be undone.`;
+  document.getElementById('confirmOverlay').classList.remove('hidden');
+}
+
+function closeConfirm(e) {
+  if (e && e.target !== document.getElementById('confirmOverlay')) return;
+  document.getElementById('confirmOverlay').classList.add('hidden');
+  deletingId = null;
+}
+
+function confirmDelete() {
+  songs = songs.filter(x => x.id !== deletingId);
+  save();
+  closeConfirm();
+  refresh();
+  toast('Song deleted');
+}
+
+// ─── Export / Import ──────────────────────────────────────────────────────────
+function exportJSON() {
+  const data = JSON.stringify({ version: 1, exported: new Date().toISOString(), songs }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `nashville-coverage-${today()}.json`;
+  a.click();
+  toast('Exported');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const imported = Array.isArray(data) ? data : (data.songs || []);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      let added = 0, updated = 0;
+      imported.forEach(s => {
+        const existing = songs.find(x =>
+          x.title.trim().toLowerCase() === (s.title || '').trim().toLowerCase() &&
+          x.artist.trim().toLowerCase() === (s.artist || '').trim().toLowerCase()
+        );
+        if (existing) {
+          if (s.chart != null) { existing.chart = s.chart; updated++; }
+        } else {
+          songs.push({ ...s, id: genId() });
+          added++;
+        }
+      });
+      save();
+      refresh();
+      toast(`Imported ${added} new, ${updated} updated (${imported.length - added - updated} skipped)`);
+    } catch(err) {
+      toast('Import failed — invalid JSON');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal();
+    closeConfirm();
+  }
+  if (e.key === 'Enter' && !document.getElementById('modalOverlay').classList.contains('hidden')) {
+    if (document.activeElement.tagName !== 'TEXTAREA') saveSong();
+  }
+});
+
+// ─── Refresh ──────────────────────────────────────────────────────────────────
+function refresh() {
+  updateScore();
+  renderTable();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+load();
+refresh();
+
+// Delegated click handler for status badges — more reliable than inline onclick
+// in dynamically-set innerHTML across all browsers.
+document.getElementById('songBody').addEventListener('click', function(e) {
+  const badge = e.target.closest('[data-song-id]');
+  if (badge) cycleStatus(badge.dataset.songId);
+});
+</script>
+</body>
+</html>

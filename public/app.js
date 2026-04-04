@@ -127,6 +127,7 @@ function renderWeekly() {
         <div class="weekly-song-artist">${esc(s.artist)}</div>
       </div>
       <span class="status-badge ${statusClass(s.status)}">${esc(s.status)}</span>
+      <a class="btn btn-sm" href="https://open.spotify.com/search/${encodeURIComponent(s.title + ' ' + s.artist)}" target="_blank" rel="noopener" title="Search on Spotify">Spotify</a>
     </div>
   `).join('');
 }
@@ -249,6 +250,7 @@ function renderTable() {
           <button class="btn btn-sm" onclick="markReviewedToday('${s.id}')" title="Mark reviewed today">✓ Today</button>
           <button class="btn btn-sm" onclick="openModal('${s.id}')" title="Edit">Edit</button>
           <button class="btn btn-sm btn-danger" onclick="openConfirm('${s.id}')" title="Delete">Del</button>
+          <a class="btn btn-sm" href="https://open.spotify.com/search/${encodeURIComponent(s.title + ' ' + s.artist)}" target="_blank" rel="noopener" title="Search on Spotify">Spotify</a>
         </div>
       </td>
     </tr>`;

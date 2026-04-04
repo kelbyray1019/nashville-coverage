@@ -127,6 +127,7 @@ function renderWeekly() {
         <div class="weekly-song-artist">${esc(s.artist)}</div>
       </div>
       <span class="status-badge ${statusClass(s.status)}">${esc(s.status)}</span>
+      ${s.chart ? `<a class="btn btn-sm" href="${esc(s.chart)}" target="_blank" rel="noopener" title="Open chart">Chart</a>` : ''}
     </div>
   `).join('');
 }

@@ -126,7 +126,7 @@ function renderWeekly() {
         <div class="weekly-song-title">${esc(s.title)}</div>
         <div class="weekly-song-artist">${esc(s.artist)}</div>
       </div>
-      <span class="status-badge ${statusClass(s.status)}">${esc(s.status)}</span>
+      <span class="status-badge ${statusClass(s.status)}" data-song-id="${s.id}" title="Click to cycle: Don't Know → Can Fake → Know Cold">${esc(s.status)}</span>
       <a class="btn btn-sm" href="https://open.spotify.com/search/${encodeURIComponent(s.title + ' ' + s.artist)}" target="_blank" rel="noopener" title="Search on Spotify">Spotify</a>
     </div>
   `).join('');
@@ -450,6 +450,11 @@ load(); // async — calls refresh() internally after data loads
 // Delegated click handler for status badges — more reliable than inline onclick
 // in dynamically-set innerHTML across all browsers.
 document.getElementById('songBody').addEventListener('click', function(e) {
+  const badge = e.target.closest('[data-song-id]');
+  if (badge) cycleStatus(badge.dataset.songId);
+});
+
+document.getElementById('weeklySongs').addEventListener('click', function(e) {
   const badge = e.target.closest('[data-song-id]');
   if (badge) cycleStatus(badge.dataset.songId);
 });

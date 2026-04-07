@@ -144,6 +144,8 @@ header h1 {
 .weekly-song-title { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .weekly-song-artist { font-size: 11px; color: var(--text-muted); }
 .weekly-empty { color: var(--text-muted); font-style: italic; font-size: 13px; }
+.btn-snooze { opacity: 0.6; }
+.btn-snooze:hover { opacity: 1; }
 
 /* Controls */
 .controls {

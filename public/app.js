@@ -99,9 +99,24 @@ function setScore(tier, val, sub, p) {
   document.getElementById('score' + tier + 'Sub').textContent = sub;
 }
 
+function snoozeSong(id) {
+  const song = songs.find(s => s.id === id);
+  if (!song) return;
+  const until = new Date();
+  until.setDate(until.getDate() + 12);
+  song.snoozedUntil = until.toISOString().slice(0, 10);
+  save();
+  renderWeekly();
+}
+
 function renderWeekly() {
   const el = document.getElementById('weeklySongs');
-  const aGaps = songs.filter(s => s.tier === 'A' && s.status !== 'Know Cold');
+  const today = new Date().toISOString().slice(0, 10);
+  const aGaps = songs.filter(s =>
+    s.tier === 'A' &&
+    s.status !== 'Know Cold' &&
+    !(s.snoozedUntil && today < s.snoozedUntil)
+  );
 
   // Sort: Don't Know first, then by oldest reviewed
   aGaps.sort((a, b) => {
@@ -128,6 +143,7 @@ function renderWeekly() {
       </div>
       <span class="status-badge ${statusClass(s.status)}" data-song-id="${s.id}" title="Click to cycle: Don't Know → Can Fake → Know Cold">${esc(s.status)}</span>
       <a class="btn btn-sm" href="https://open.spotify.com/search/${encodeURIComponent(s.title + ' ' + s.artist)}" target="_blank" rel="noopener" title="Search on Spotify">Spotify</a>
+      <button class="btn btn-sm btn-snooze" data-snooze-id="${s.id}" title="Snooze for 12 days">Snooze</button>
     </div>
   `).join('');
 }
@@ -457,4 +473,6 @@ document.getElementById('songBody').addEventListener('click', function(e) {
 document.getElementById('weeklySongs').addEventListener('click', function(e) {
   const badge = e.target.closest('[data-song-id]');
   if (badge) cycleStatus(badge.dataset.songId);
+  const snoozeBtn = e.target.closest('[data-snooze-id]');
+  if (snoozeBtn) snoozeSong(snoozeBtn.dataset.snoozeId);
 });

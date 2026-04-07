@@ -3,7 +3,7 @@ import Script from 'next/script';
 
 const bodyHTML = `
 <header>
-  <h1>Nashville Coverage Tracker</h1>
+  <h1>Broadway Song Gauntlet</h1>
   <div class="header-actions">
     <button class="btn" onclick="exportJSON()">Export JSON</button>
     <label class="btn" style="cursor:pointer">
@@ -161,7 +161,7 @@ export default function Home() {
       <Head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Nashville Coverage Tracker</title>
+        <title>Broadway Song Gauntlet</title>
       </Head>
       <div dangerouslySetInnerHTML={{ __html: bodyHTML }} />
       <Script src="/app.js" strategy="afterInteractive" />

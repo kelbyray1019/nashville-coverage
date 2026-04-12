@@ -48,7 +48,7 @@ const bodyHTML = `
 
   <!-- Weekly Workflow Panel -->
   <div class="panel">
-    <div class="panel-title">This Week&#39;s Focus &mdash; A-Tier Gaps</div>
+    <div class="panel-title">This Week&#39;s Focus</div>
     <div class="weekly-songs" id="weeklySongs"></div>
   </div>
 

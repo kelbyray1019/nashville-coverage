@@ -105,20 +105,40 @@ function snoozeSong(id) {
   const until = new Date();
   until.setDate(until.getDate() + 12);
   song.snoozedUntil = until.toISOString().slice(0, 10);
+  song.inFocus = false;
   save();
-  renderWeekly();
+  refresh();
+}
+
+function addToFocus(id) {
+  const s = songs.find(x => x.id === id);
+  if (!s || s.inFocus) return;
+  s.inFocus = true;
+  save();
+  refresh();
+  toast('Added to focus');
 }
 
 function renderWeekly() {
   const el = document.getElementById('weeklySongs');
-  const today = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // Manual focus songs: explicitly added, not Know Cold, not snoozed
+  const manualFocus = songs.filter(s =>
+    s.inFocus &&
+    s.status !== 'Know Cold' &&
+    !(s.snoozedUntil && todayStr < s.snoozedUntil)
+  );
+
+  // Auto-fill: A-tier, not Know Cold, not snoozed, not already in manual focus
   const aGaps = songs.filter(s =>
     s.tier === 'A' &&
     s.status !== 'Know Cold' &&
-    !(s.snoozedUntil && today < s.snoozedUntil)
+    !s.inFocus &&
+    !(s.snoozedUntil && todayStr < s.snoozedUntil)
   );
 
-  // Sort: Don't Know first, then by oldest reviewed
+  // Sort auto-fill: Don't Know first, then by oldest reviewed
   aGaps.sort((a, b) => {
     const statusOrder = {"Don't Know": 0, 'Can Fake': 1, 'Know Cold': 2};
     const sd = statusOrder[a.status] - statusOrder[b.status];
@@ -128,7 +148,8 @@ function renderWeekly() {
     return ad < bd ? -1 : 1;
   });
 
-  const focus = aGaps.slice(0, 3);
+  const needed = Math.max(0, 3 - manualFocus.length);
+  const focus = [...manualFocus, ...aGaps.slice(0, needed)];
 
   if (focus.length === 0) {
     el.innerHTML = '<div class="weekly-empty">All A-tier songs marked Know Cold — great work!</div>';
@@ -263,7 +284,7 @@ function renderTable() {
       <td class="td-notes" title="${esc(s.notes)}">${esc(s.notes) || '—'}</td>
       <td>
         <div class="td-actions">
-          <button class="btn btn-sm" onclick="markReviewedToday('${s.id}')" title="Mark reviewed today">✓ Today</button>
+          <button class="btn btn-sm${s.inFocus ? ' btn-focus-added' : ''}" onclick="addToFocus('${s.id}')" title="Add to weekly focus" ${s.inFocus ? 'disabled' : ''}>Add+</button>
           <button class="btn btn-sm" onclick="openModal('${s.id}')" title="Edit">Edit</button>
           <button class="btn btn-sm btn-danger" onclick="openConfirm('${s.id}')" title="Delete">Del</button>
           <a class="btn btn-sm" href="https://open.spotify.com/search/${encodeURIComponent(s.title + ' ' + s.artist)}" target="_blank" rel="noopener" title="Search on Spotify">Spotify</a>
@@ -282,18 +303,10 @@ function cycleStatus(id) {
   const idx = STATUS_CYCLE.indexOf(s.status);
   s.status = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
   s.lastReviewed = today();
+  if (s.status === 'Know Cold') s.inFocus = false;
   save();
   refresh();
   toast(`Status → ${s.status}`);
-}
-
-function markReviewedToday(id) {
-  const s = songs.find(x => x.id === id);
-  if (!s) return;
-  s.lastReviewed = today();
-  save();
-  refresh();
-  toast('Marked reviewed today');
 }
 
 function today() {

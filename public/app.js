@@ -111,7 +111,7 @@ function snoozeSong(id) {
 }
 
 function addToFocus(id) {
-  const s = songs.find(x => x.id === id);
+  const s = songs.find(x => x.id == id);
   if (!s || s.inFocus) return;
   s.inFocus = true;
   save();

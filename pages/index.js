@@ -5,6 +5,9 @@ const bodyHTML = `
 <header>
   <h1>Broadway Song Gauntlet</h1>
   <div class="header-actions">
+    <span id="saveStatus" class="save-status" role="status" aria-live="polite">Loading songs…</span>
+    <button id="retryLoad" class="btn btn-sm" style="display:none" onclick="load()">Retry load</button>
+    <button id="retrySave" class="btn btn-sm" style="display:none" onclick="save()">Retry save</button>
     <button class="btn" onclick="exportJSON()">Export JSON</button>
     <label class="btn" style="cursor:pointer">
       Import JSON
@@ -15,6 +18,12 @@ const bodyHTML = `
 </header>
 
 <div class="main">
+  <div class="load-error hidden" id="loadError" role="alert">Could not load online songs. Your data may still be in the database. Reconnect and reload before making changes.</div>
+  <div class="recovery-bar hidden" id="recoveryBar">
+    <span id="recoveryText"></span>
+    <button class="btn btn-sm" onclick="restorePending()">Restore local copy</button>
+    <button class="btn btn-sm" onclick="dismissRecovery()">Dismiss</button>
+  </div>
 
   <!-- Coverage Score Panel -->
   <div class="panel" id="scorePanel">
@@ -147,6 +156,22 @@ const bodyHTML = `
     <div class="modal-footer">
       <button class="btn" onclick="closeConfirm()">Cancel</button>
       <button class="btn btn-primary btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import choice -->
+<div class="modal-overlay hidden" id="importOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div class="modal-title">Import Song Backup</div>
+      <button class="modal-close" onclick="closeImport()">&times;</button>
+    </div>
+    <p class="confirm-msg" id="importSummary"></p>
+    <div class="import-actions">
+      <button class="btn" onclick="closeImport()">Cancel</button>
+      <button class="btn" onclick="confirmImport('merge')">Merge new songs</button>
+      <button class="btn btn-primary" onclick="confirmImport('restore')">Restore full backup</button>
     </div>
   </div>
 </div>

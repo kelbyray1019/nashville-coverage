@@ -224,6 +224,10 @@ function addToFocus(id) {
 
 function renderWeekly() {
   const el = document.getElementById('weeklySongs');
+  if (!loadReady) {
+    el.innerHTML = '<div class="weekly-empty">Weekly focus is unavailable until songs load.</div>';
+    return;
+  }
   const todayStr = new Date().toISOString().slice(0, 10);
 
   // Manual focus songs: explicitly added, not Know Cold, not snoozed
@@ -370,8 +374,8 @@ function renderTable() {
 
   if (sorted.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
-      <strong>${songs.length === 0 ? 'No songs yet' : 'No matches'}</strong>
-      <p>${songs.length === 0 ? 'Click &quot;+ Add Song&quot; to get started.' : 'Try a different search or filter.'}</p>
+      <strong>${!loadReady ? 'Songs unavailable' : songs.length === 0 ? 'No songs yet' : 'No matches'}</strong>
+      <p>${!loadReady ? 'Retry loading before editing your song list.' : songs.length === 0 ? 'Click &quot;+ Add Song&quot; to get started.' : 'Try a different search or filter.'}</p>
     </div></td></tr>`;
     return;
   }

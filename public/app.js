@@ -7,23 +7,126 @@ let sortDir = 1; // 1 = asc, -1 = desc
 let activeFilter = 'all';
 
 // ─── Load / Save ─────────────────────────────────────────────────────────────
+const PENDING_KEY = 'nashville_coverage_unsaved_songs';
+const LAST_GOOD_KEY = 'nashville_coverage_last_good_songs';
+let loadReady = false;
+let saveQueue = Promise.resolve();
+let saveSequence = 0;
+
+function setSaveStatus(message, state = '') {
+  const el = document.getElementById('saveStatus');
+  el.textContent = message;
+  el.className = 'save-status ' + state;
+  document.getElementById('retryLoad').style.display =
+    message.startsWith('Load failed') || message.startsWith('Not saved') ? 'inline-flex' : 'none';
+  document.getElementById('retrySave').style.display =
+    message.startsWith('Save failed') ? 'inline-flex' : 'none';
+}
+
+function readCopy(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || 'null');
+    return value && Array.isArray(value.songs) ? value : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function pendingCopy() {
+  return readCopy(PENDING_KEY) || readCopy(LAST_GOOD_KEY);
+}
+
+function showRecovery(copy) {
+  const bar = document.getElementById('recoveryBar');
+  document.getElementById('recoveryText').textContent =
+    'An unsaved local copy from ' + new Date(copy.time).toLocaleString() +
+    ' has ' + copy.songs.length + ' songs. Restore it if your recent changes are missing.';
+  bar.classList.remove('hidden');
+}
+
+function dismissRecovery() {
+  document.getElementById('recoveryBar').classList.add('hidden');
+}
+
+function restorePending() {
+  const copy = pendingCopy();
+  if (!copy) { toast('No local copy found'); return; }
+  if (!loadReady) { toast('Reconnect and reload before restoring'); return; }
+  songs = copy.songs;
+  dismissRecovery();
+  save();
+  refresh();
+}
+
 async function load() {
+  setSaveStatus('Loading songs…', 'saving');
   try {
     const res = await fetch('/api/songs');
+    if (!res.ok) throw new Error('Load failed: ' + res.status);
     const data = await res.json();
-    songs = Array.isArray(data) ? data : [];
-  } catch(e) {
+    if (!Array.isArray(data)) throw new Error('Invalid song response');
+    songs = data;
+    loadReady = true;
+    document.getElementById('loadError').classList.add('hidden');
+    const pending = readCopy(PENDING_KEY);
+    const lastGood = readCopy(LAST_GOOD_KEY);
+    if (pending && JSON.stringify(pending.songs) !== JSON.stringify(songs)) {
+      showRecovery(pending);
+    } else if (songs.length === 0 && lastGood && lastGood.songs.length > 0) {
+      showRecovery(lastGood);
+    } else {
+      try {
+        if (pending) localStorage.removeItem(PENDING_KEY);
+        if (songs.length > 0)
+          localStorage.setItem(LAST_GOOD_KEY, JSON.stringify({ songs, time: new Date().toISOString() }));
+      } catch (_) {}
+    }
+    setSaveStatus('Loaded', 'saved');
+  } catch (e) {
+    loadReady = false;
     songs = [];
+    document.getElementById('loadError').classList.remove('hidden');
+    setSaveStatus('Load failed — online songs unavailable', 'error');
   }
   refresh();
 }
 
 function save() {
-  fetch('/api/songs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(songs)
+  const revision = ++saveSequence;
+  const snapshot = JSON.stringify(songs);
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ songs, time: new Date().toISOString() }));
+  } catch (_) {
+    setSaveStatus('Local backup unavailable', 'error');
+  }
+  if (!loadReady) {
+    setSaveStatus('Not saved — reconnect and reload', 'error');
+    return Promise.resolve(false);
+  }
+  setSaveStatus('Saving…', 'saving');
+  // Serialize writes so an older request cannot finish after a newer one.
+  saveQueue = saveQueue.then(async () => {
+    const res = await fetch('/api/songs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: snapshot
+    });
+    if (!res.ok) throw new Error('Save failed: ' + res.status);
+  }).then(() => {
+    if (revision === saveSequence) {
+      try {
+        localStorage.setItem(LAST_GOOD_KEY, JSON.stringify({ songs: JSON.parse(snapshot), time: new Date().toISOString() }));
+        localStorage.removeItem(PENDING_KEY);
+      } catch (_) {}
+      setSaveStatus('Saved', 'saved');
+    }
+    return true;
+  }, () => {
+    if (revision === saveSequence)
+      setSaveStatus('Save failed — export a JSON backup or retry', 'error');
+    return false;
   });
+  return saveQueue;
 }
 
 // ─── ID helper ───────────────────────────────────────────────────────────────
@@ -404,6 +507,10 @@ function confirmDelete() {
 
 // ─── Export / Import ──────────────────────────────────────────────────────────
 function exportJSON() {
+  if (!loadReady && songs.length === 0) {
+    toast('Load failed — no songs available to export');
+    return;
+  }
   const data = JSON.stringify({ version: 1, exported: new Date().toISOString(), songs }, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const a = document.createElement('a');
@@ -413,37 +520,60 @@ function exportJSON() {
   toast('Exported');
 }
 
+let pendingImport = null;
+
 function importJSON(event) {
   const file = event.target.files[0];
+  event.target.value = '';
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      const imported = Array.isArray(data) ? data : (data.songs || []);
-      if (!Array.isArray(imported)) throw new Error('Invalid format');
-      let added = 0, updated = 0;
-      imported.forEach(s => {
-        const existing = songs.find(x =>
-          x.title.trim().toLowerCase() === (s.title || '').trim().toLowerCase() &&
-          x.artist.trim().toLowerCase() === (s.artist || '').trim().toLowerCase()
-        );
-        if (existing) {
-          if (s.chart != null) { existing.chart = s.chart; updated++; }
-        } else {
-          songs.push({ ...s, id: genId() });
-          added++;
-        }
-      });
-      save();
-      refresh();
-      toast(`Imported ${added} new, ${updated} updated (${imported.length - added - updated} skipped)`);
-    } catch(err) {
-      toast('Import failed — invalid JSON');
+      const imported = Array.isArray(data) ? data : data.songs;
+      if (!Array.isArray(imported) || !imported.every(s =>
+        s && typeof s.title === 'string' && s.title.trim() &&
+        typeof s.artist === 'string' && s.artist.trim()
+      )) throw new Error('Invalid song list');
+      pendingImport = imported;
+      document.getElementById('importSummary').textContent =
+        'Backup: ' + imported.length + ' songs. Current list: ' + songs.length +
+        ' songs. Restore replaces the current list. Merge adds missing songs and chart links while keeping current progress.';
+      document.getElementById('importOverlay').classList.remove('hidden');
+    } catch (_) {
+      toast('Import failed — invalid song JSON');
     }
   };
   reader.readAsText(file);
-  event.target.value = '';
+}
+
+function closeImport() {
+  document.getElementById('importOverlay').classList.add('hidden');
+  pendingImport = null;
+}
+
+function confirmImport(mode) {
+  if (!pendingImport) return;
+  const imported = pendingImport;
+  if (mode === 'restore') {
+    songs = imported.map(s => ({ ...s, id: genId() }));
+  } else {
+    imported.forEach(s => {
+      const existing = songs.find(x =>
+        x.title.trim().toLowerCase() === s.title.trim().toLowerCase() &&
+        x.artist.trim().toLowerCase() === s.artist.trim().toLowerCase()
+      );
+      if (existing) {
+        if (s.chart != null) existing.chart = s.chart;
+      } else {
+        songs.push({ ...s, id: genId() });
+      }
+    });
+  }
+  closeImport();
+  save();
+  refresh();
+  toast(mode === 'restore' ? 'Backup restored locally — check save status' : 'Songs merged — check save status');
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -461,6 +591,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeModal();
     closeConfirm();
+    closeImport();
   }
   if (e.key === 'Enter' && !document.getElementById('modalOverlay').classList.contains('hidden')) {
     if (document.activeElement.tagName !== 'TEXTAREA') saveSong();
